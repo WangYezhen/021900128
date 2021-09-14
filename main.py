@@ -18,6 +18,8 @@ args = parser.parse_args()
 global Total
 Total = 0
 
+def takeFirst(elem):
+    return elem[0]
 
 def initChaizi():
     wubi98 = Schema('wubi98')
@@ -80,10 +82,11 @@ def createChaizi(chai, word):
 def sensitiveFinder(sentence_list, regular_list, regular_chai_list,pinyin_list, sensitiveWords):
     global Total
     for line, sentence in enumerate(sentence_list):# 一行一行检测
+        sensitive_loc = []
         for num, regular in enumerate(regular_chai_list):
             for i in re.finditer(regular, sentence, re.I):
                 ans = 'Line' + str(line+1) + ':' + ' <' + sensitiveWords[num] + '> ' + i.group()
-                print(ans)
+                sensitive_loc.append((i.span()[0], ans))
                 Total += 1
 
         location = []
@@ -105,10 +108,17 @@ def sensitiveFinder(sentence_list, regular_list, regular_chai_list,pinyin_list, 
                         flag = 0
                 if flag == 1:
                     ans = 'Line' + str(line+1) + ':' + ' <' + sensitiveWords[num] + '> ' + i.group()
+                    sensitive_loc.append((i.span()[0], ans))
+                    Total += 1
+
                 else:
                     ans = 'Line' + str(line + 1) + ':' + ' <' + sensitiveWords[num] + '> ' + sentence[i.span()[0]:i.span()[1]]
-                print(ans)
-                Total += 1
+                    sensitive_loc.append((i.span()[0], ans))
+                    Total += 1
+
+        sensitive_loc.sort(key=takeFirst)
+        for group in sensitive_loc:
+            print(group[1])
     print(Total)
 
 
@@ -156,7 +166,7 @@ def creatRegular(dict_word, flag):
             if regular_key != '':
                 regular.append(regular_key)
 
-    print(regular)
+    # print(regular)
     return regular
 
 
