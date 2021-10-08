@@ -3,25 +3,35 @@ from pypinyin import lazy_pinyin
 from pychai import Schema
 import re
 import time
+import sys
+import timeit
+import profile
 
 # 定义参数
-parser = argparse.ArgumentParser(description='manual to this script')
-parser.add_argument('--words', type=str, default='')
-parser.add_argument('--org', type=str, default='')
-parser.add_argument('--ans', type=str, default='')
-args = parser.parse_args()
+# parser = argparse.ArgumentParser(description='manual to this script')
+# parser.add_argument('--words', type=str, default='')
+# parser.add_argument('--org', type=str, default='')
+# parser.add_argument('--ans', type=str, default='')
+# args = parser.parse_args()
 
 '''
     # 命令行输入这个
     # python main.py --words=路径 --org=路径 --ans=路径
 '''
 global Total # 全局变量用来记录敏感词个数
+global a
+global b
+global c
 Total = 0
+a = 0
+b = 0
+c = 0
 
 def takeFirst(elem): # 定义取元祖中第一个元素的函数
     return elem[0]
 
 def initChaizi(): # 拆字函数
+    start = time.time()  # 开始时间
     wubi98 = Schema('wubi98')
     wubi98.run()
     for nameChar in wubi98.charList:
@@ -67,6 +77,8 @@ def initChaizi(): # 拆字函数
             info = [objectRoot.name for objectRoot in scheme]
         code = ''.join(wubi98.rootSet[nameRoot] for nameRoot in info)
         wubi98.encoder[nameChar] = code
+    end = time.time()
+    print('initChaizi Running time: %s Seconds' % (end - start))
     return wubi98
 
 
@@ -79,14 +91,25 @@ def createChaizi(chai, word): # 调用拆字函数的函数
         return '0'
 
 
+
 def sensitiveFinder(sentence_list, regular_list, regular_chai_list,pinyin_list, sensitiveWords, file_ans): # 敏感词寻找器
+    start = time.time()  # 开始时间
     global Total
+    global a
+    global b
+    global c
     ans_list = []
     for line, sentence in enumerate(sentence_list):# 一行一行检测
         sensitive_loc = []
         for num, regular in enumerate(regular_chai_list): # 首先将拆字找出来并加入到列表中
             for i in re.finditer(regular, sentence, re.I):
                 ans = 'Line' + str(line+1) + ':' + ' <' + sensitiveWords[num] + '> ' + i.group() + '\n'
+                if num == 0:
+                    a += 1
+                elif num ==1:
+                    b += 1
+                elif num == 2:
+                    c += 1
                 sensitive_loc.append((i.span()[0], ans))
                 Total += 1
 
@@ -109,11 +132,23 @@ def sensitiveFinder(sentence_list, regular_list, regular_chai_list,pinyin_list, 
                         flag = 0
                 if flag == 1: # 若是同音不同形字
                     ans = 'Line' + str(line+1) + ':' + ' <' + sensitiveWords[num] + '> ' + i.group() + '\n'
+                    if num == 0:
+                        a += 1
+                    elif num == 1:
+                        b += 1
+                    elif num == 2:
+                        c += 1
                     sensitive_loc.append((i.span()[0], ans))
                     Total += 1
 
                 else: # 若不是同音不同形字
                     ans = 'Line' + str(line + 1) + ':' + ' <' + sensitiveWords[num] + '> ' + sentence[i.span()[0]:i.span()[1]] + '\n'
+                    if num == 0:
+                        a += 1
+                    elif num == 1:
+                        b += 1
+                    elif num == 2:
+                        c += 1
                     sensitive_loc.append((i.span()[0], ans))
                     Total += 1
 
@@ -125,9 +160,13 @@ def sensitiveFinder(sentence_list, regular_list, regular_chai_list,pinyin_list, 
     file_ans.write(ans)
     for group in ans_list:
         file_ans.write(group)
+    end = time.time()
+    print('sensitiveFinder Running time: %s Seconds' % (end - start))
+    print(a, b, c)
 
 
 def creatRegular(dict_word, flag): # 正则表达式生成函数
+    start = time.time()  # 开始时间
     regular = []
     if flag == 1: # 第一次生成拼音、多音字的正则表达式
         for key in dict_word: # 键值
@@ -171,16 +210,17 @@ def creatRegular(dict_word, flag): # 正则表达式生成函数
             if regular_key != '':
                 regular.append(regular_key)
 
-    # print(regular)
+    print(regular)
+    end = time.time()
+    # print('creatRegular Running time: %s Seconds' % (end - start))
     return regular
 
-
 if __name__ == '__main__':
-    start = time.time() # 开始时间
+    start = time.time()  # 开始时间
     # 参数传递
-    file_word = open(args.words, 'r', encoding='utf-8')
-    file_org = open(args.org, 'r', encoding='utf-8')
-    file_ans = open(args.ans, 'w', encoding='utf-8')
+    file_word = open(sys.argv[1], 'r', encoding='utf-8')
+    file_org = open(sys.argv[2], 'r', encoding='utf-8')
+    file_ans = open(sys.argv[3], 'w', encoding='utf-8')
     # 原文与敏感词读取
     text = file_org.readlines()
     readRes = file_word.read()
@@ -212,4 +252,4 @@ if __name__ == '__main__':
     sensitiveFinder(text, creatRegular(dict_word, 1), creatRegular(dict_word, 0), pinyin_list, sensitiveWords, file_ans)
     # 输出程序运行时间
     end = time.time()
-    print('Running time: %s Seconds'%(end-start))
+    print('Running time: %s Seconds' % (end - start))
